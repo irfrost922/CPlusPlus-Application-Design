@@ -6,4 +6,5 @@
 6. compile code: 
 
 g++ -std=c++17 -Wall -Wextra -Wpedantic main.cpp -o atlas_data_explorer
+
 ./atlas_data_explorer
