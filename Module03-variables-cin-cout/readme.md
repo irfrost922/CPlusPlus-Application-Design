@@ -6,4 +6,5 @@
 6. compile code:
 
 g++ -std=c++17 -Wall -Wextra -Wpedantic welcome.cpp -o welcome
+
 ./welcome
