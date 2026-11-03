@@ -1,38 +1,42 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 
 #include "RecordTools.h"
+#include "UserRoles.h"
 
 using namespace std;
 
-int main(int argc, char* argv[]) {
-    const int RECORDS_TO_LOAD = 5;
+int readChoice(int minimum, int maximum) {
+    int choice;
 
-    string participantIds[MAX_RECORDS];
-    double dailySocialMediaHours[MAX_RECORDS];
-    string primaryPlatforms[MAX_RECORDS];
-
-    string fileName = "social_media_dopamine_productivity.csv";
-
-    if (argc > 1) {
-        fileName = argv[1];
+    while (!(cin >> choice) || choice < minimum || choice > maximum) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid choice. Enter a number from "
+             << minimum << " to " << maximum << ": ";
     }
 
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return choice;
+}
+
+int loadRecords(const string& fileName,
+                string participantIds[],
+                double dailySocialMediaHours[],
+                string primaryPlatforms[]) {
+    const int RECORDS_TO_LOAD = 5;
     ifstream inputFile(fileName);
 
     if (!inputFile.is_open()) {
-        cout << "Error: Could not open " << fileName << endl;
-        cout << "Place the CSV file in the same folder as the program," << endl;
-        cout << "or enter its path when running the program." << endl;
-        return 1;
+        return -1;
     }
 
     string line;
-    getline(inputFile, line);  // Skip the header row.
-
+    getline(inputFile, line);
     int recordCount = 0;
 
     while (recordCount < RECORDS_TO_LOAD && getline(inputFile, line)) {
@@ -63,40 +67,195 @@ int main(int argc, char* argv[]) {
             fieldIndex++;
         }
 
-        if (!participantId.empty() && !primaryPlatform.empty()) {
-            addRecord(participantIds,
-                      dailySocialMediaHours,
-                      primaryPlatforms,
-                      recordCount,
-                      participantId,
-                      dailyHours,
-                      primaryPlatform);
-        }
+        addRecord(participantIds,
+                  dailySocialMediaHours,
+                  primaryPlatforms,
+                  recordCount,
+                  participantId,
+                  dailyHours,
+                  primaryPlatform);
     }
 
-    inputFile.close();
+    return recordCount;
+}
 
-    if (recordCount < RECORDS_TO_LOAD) {
-        cout << "Error: The file contains fewer than " << RECORDS_TO_LOAD
-             << " usable records." << endl;
+void searchForRecord(const string participantIds[],
+                     const double dailySocialMediaHours[],
+                     const string primaryPlatforms[],
+                     int recordCount) {
+    string targetId;
+    cout << "Enter the participant ID to find: ";
+    getline(cin, targetId);
+
+    int recordIndex = binarySearchById(participantIds,
+                                       recordCount,
+                                       targetId);
+
+    if (recordIndex == -1) {
+        cout << "Record not found." << endl;
+        return;
+    }
+
+    cout << "\nRecord found:" << endl;
+    cout << "Participant ID: " << participantIds[recordIndex] << endl;
+    cout << "Daily Hours: " << fixed << setprecision(1)
+         << dailySocialMediaHours[recordIndex] << endl;
+    cout << "Primary Platform: " << primaryPlatforms[recordIndex] << endl;
+}
+
+int main(int argc, char* argv[]) {
+    string participantIds[MAX_RECORDS];
+    double dailySocialMediaHours[MAX_RECORDS];
+    string primaryPlatforms[MAX_RECORDS];
+
+    string fileName = "social_media_dopamine_productivity.csv";
+
+    if (argc > 1) {
+        fileName = argv[1];
+    }
+
+    int recordCount = loadRecords(fileName,
+                                  participantIds,
+                                  dailySocialMediaHours,
+                                  primaryPlatforms);
+
+    if (recordCount == -1) {
+        cout << "Error: Could not open " << fileName << endl;
         return 1;
     }
 
-    displayRecords(participantIds,
-                   dailySocialMediaHours,
-                   primaryPlatforms,
-                   recordCount);
+    if (recordCount == 0) {
+        cout << "Error: No usable records were found." << endl;
+        return 1;
+    }
 
-    double averageHours = calculateAverageHours(dailySocialMediaHours,
-                                                recordCount);
+    string username;
+    cout << "Enter your username: ";
+    getline(cin, username);
 
-    cout << "\nAverage daily social media use: "
-         << fixed << setprecision(1) << averageHours << " hours" << endl;
+    cout << "\nChoose your role:" << endl;
+    cout << "1. Admin" << endl;
+    cout << "2. Regular User" << endl;
+    cout << "Choose an option: ";
+    int roleChoice = readChoice(1, 2);
 
-    double* hoursPointer = &dailySocialMediaHours[0];
+    Admin adminUser(username);
+    RegularUser regularUser(username);
+    User* currentUser;
 
-    cout << "\nFirst participant's daily hours through pointer: "
-         << *hoursPointer << endl;
+    if (roleChoice == 1) {
+        currentUser = &adminUser;
+    } else {
+        currentUser = &regularUser;
+    }
+
+    cout << "\nWelcome, " << currentUser->getUsername() << "!" << endl;
+    cout << "Role: " << currentUser->getRoleName() << endl;
+
+    int menuChoice = 0;
+
+    while (menuChoice != 6) {
+        cout << "\n=== DATASET RECORD MENU ===" << endl;
+        cout << "1. Display Records" << endl;
+        cout << "2. Search by Participant ID" << endl;
+        cout << "3. Calculate Average Daily Hours" << endl;
+        cout << "4. Add Record (Admin only)" << endl;
+        cout << "5. Delete Record (Admin only)" << endl;
+        cout << "6. Exit" << endl;
+        cout << "Choose an option: ";
+        menuChoice = readChoice(1, 6);
+
+        switch (menuChoice) {
+            case 1:
+                displayRecords(participantIds,
+                               dailySocialMediaHours,
+                               primaryPlatforms,
+                               recordCount);
+                break;
+
+            case 2:
+                searchForRecord(participantIds,
+                                dailySocialMediaHours,
+                                primaryPlatforms,
+                                recordCount);
+                break;
+
+            case 3:
+                cout << "Average daily social media use: "
+                     << fixed << setprecision(1)
+                     << calculateAverageHours(dailySocialMediaHours,
+                                              recordCount)
+                     << " hours" << endl;
+                break;
+
+            case 4: {
+                if (!currentUser->canModifyRecords()) {
+                    cout << "Permission denied. Admin access is required."
+                         << endl;
+                    break;
+                }
+
+                string newId;
+                string newPlatform;
+                double newHours;
+
+                cout << "Enter the new participant ID: ";
+                getline(cin, newId);
+                cout << "Enter average daily social media hours: ";
+
+                while (!(cin >> newHours) || newHours < 0) {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    cout << "Enter a nonnegative number: ";
+                }
+
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Enter the primary platform: ";
+                getline(cin, newPlatform);
+
+                if (addRecord(participantIds,
+                              dailySocialMediaHours,
+                              primaryPlatforms,
+                              recordCount,
+                              newId,
+                              newHours,
+                              newPlatform)) {
+                    cout << "Record added in sorted order." << endl;
+                } else {
+                    cout << "Record could not be added. The ID may already "
+                         << "exist, or the array may be full." << endl;
+                }
+                break;
+            }
+
+            case 5: {
+                if (!currentUser->canModifyRecords()) {
+                    cout << "Permission denied. Admin access is required."
+                         << endl;
+                    break;
+                }
+
+                string idToDelete;
+                cout << "Enter the participant ID to delete: ";
+                getline(cin, idToDelete);
+
+                if (deleteRecord(participantIds,
+                                 dailySocialMediaHours,
+                                 primaryPlatforms,
+                                 recordCount,
+                                 idToDelete)) {
+                    cout << "Record deleted." << endl;
+                } else {
+                    cout << "Record not found." << endl;
+                }
+                break;
+            }
+
+            case 6:
+                cout << "Goodbye!" << endl;
+                break;
+        }
+    }
 
     return 0;
 }
