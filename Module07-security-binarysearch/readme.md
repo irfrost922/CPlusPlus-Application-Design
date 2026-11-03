@@ -10,3 +10,5 @@ g++ -std=c++17 -Wall -Wextra -Wpedantic dataset_arrays.cpp RecordTools.cpp UserR
 
 
 .\dataset_roles.exe "social_media_dopamine_productivity.csv"
+
+Imported in line 9: "#include "UserRoles.h""
