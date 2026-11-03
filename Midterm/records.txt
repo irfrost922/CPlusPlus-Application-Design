@@ -1,0 +1,8 @@
+P0004|6.0|YouTube
+P0001|7.5|Instagram
+P0007|5.5|Instagram
+P0003|6.5|TikTok
+P0002|8.0|TikTok
+P0006|6.5|YouTube
+P0005|7.0|Instagram
+P0008|5.0|YouTube
